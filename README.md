@@ -1,2 +1,3 @@
-# backup-requests
-Library for doing backup requests
+# Backup Requests Library
+
+Backup requests library for Scala applications
