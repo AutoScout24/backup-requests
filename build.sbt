@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.13"
 )
 
-coverallsTokenFile := "/home/travis/.coveralls/.token"
+coverallsTokenFile := Some("/home/travis/.coveralls/.token")
 
 coverageMinimum := 80
 coverageFailOnMinimum := true
