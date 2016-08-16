@@ -1,4 +1,5 @@
 import scala.util.Properties
+import org.scoverage.coveralls.Imports.CoverallsKeys._
 
 name := "backup-requests"
 
@@ -22,6 +23,8 @@ libraryDependencies ++= Seq(
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "com.typesafe.akka" %% "akka-actor" % "2.3.13"
 )
+
+coverallsTokenFile := "/home/travis/.coveralls/.token"
 
 coverageMinimum := 80
 coverageFailOnMinimum := true
