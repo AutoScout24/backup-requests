@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
 
 coverallsTokenFile := Some("/home/travis/.coveralls/.token")
 
-coverageMinimum := 80
+coverageMinimum := 90
 coverageFailOnMinimum := true
 
 resolvers in ThisBuild ++= Seq(
