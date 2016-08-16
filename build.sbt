@@ -23,6 +23,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.13"
 )
 
+ScoverageSbtPlugin.ScoverageKeys.coverageMinimum := 90
+
+ScoverageSbtPlugin.ScoverageKeys.coverageFailOnMinimum := true
+
 resolvers in ThisBuild ++= Seq(
   Classpaths.sbtPluginReleases,
   "Typesafe repository" at "https://repo.typesafe.com/typesafe/releases/"
