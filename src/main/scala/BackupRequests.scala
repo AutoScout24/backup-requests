@@ -4,8 +4,9 @@ import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success, Try}
 
 /**
   * Execute a future op with the possibility to retry it after some duration if the future
@@ -53,6 +54,31 @@ class BackupRequests @Inject()(actorSystem: ActorSystem) {
       }
     }
 
-    Future.firstCompletedOf(previous :: backup :: Nil)
+    BackupRequests.firstSuccessfulCompletedOf(previous :: backup :: Nil)
+  }
+}
+
+object BackupRequests {
+
+  def firstSuccessfulCompletedOf[T](futures: TraversableOnce[Future[T]])(implicit executor: ExecutionContext): Future[T] = {
+    val p = Promise[T]()
+    val completeWithSuccessfulValue: PartialFunction[T, Unit] = {
+      case v => p trySuccess v
+    }
+    futures foreach { _ onSuccess completeWithSuccessfulValue }
+
+    val matFutures: TraversableOnce[Future[Try[T]]] = futures.map {
+      future => future.map(v => Success(v)).recover {
+        case t: Throwable => Failure(t)
+      }
+    }
+
+    Future.sequence(matFutures).onSuccess {
+      case results =>
+        val allFailure = results.forall(_.isFailure)
+        if(allFailure) p.complete(results.toSeq.head)
+    }
+
+    p.future
   }
 }

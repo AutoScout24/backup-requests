@@ -21,6 +21,7 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
 
   val backupRequests = new BackupRequests(actorSystem)
   val callbackCalled = new AtomicBoolean(false)
+
   def backupRequestCallback(maybeMeta: Option[String], maybeFailure: Option[Throwable]): Unit = callbackCalled.set(true)
 
   "A backup request is executed after a timeout, if the operation does not complete fast enough" in {
@@ -79,7 +80,9 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
       Seq(200.milliseconds),
       Some("metaValue"),
       backupRequestCallback)
-    val afterOneSec = akka.pattern.after(1.second, using = actorSystem.scheduler) { Future.successful(())}
+    val afterOneSec = akka.pattern.after(1.second, using = actorSystem.scheduler) {
+      Future.successful(())
+    }
 
     afterOneSec.futureValue(twoSecTimeout)
     count.intValue() mustEqual 1
@@ -98,6 +101,38 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
 
     stopWatch.stop()
     stopWatch.elapsed(TimeUnit.MILLISECONDS) must beLessThan(200l)
+  }
+
+  "A successful request is taken even if the failed request is faster" in {
+    val count = new AtomicInteger(0)
+
+    def firstFailsAndSecondIsSlowSuccessfulRequest() =
+      if (count.incrementAndGet() == 1) {
+        Future {
+          Thread.sleep(400)
+          "success"
+        }
+      } else {
+        Future.failed(new Exception("boom!"))
+      }
+
+    def backupRequestsCallback(m : Option[String], t: Option[Throwable]): Unit = {}
+
+    backupRequests.executeWithBackup(firstFailsAndSecondIsSlowSuccessfulRequest,
+      Seq(10.milliseconds), None, backupRequestsCallback).futureValue must be("success")
+  }
+
+  "Promise is completed even if all requests fail" in {
+    def failAlways(): Future[String] = Future.failed(new Exception("boom!"))
+
+    def backupRequestsCallback(m : Option[String], t: Option[Throwable]): Unit = {}
+
+    try {
+      backupRequests.executeWithBackup(failAlways, Seq(10.milliseconds), None, backupRequestsCallback).futureValue
+      throw new Exception("test failed should never reach here")
+    } catch {
+      case e: Exception => e.getMessage must be("boom!")
+    }
   }
 }
 
