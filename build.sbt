@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
   "net.codingwell" %% "scala-guice" % "4.0.1",
-  "com.autoscout24" %% "eventpublisher24" % "131"
+  "com.typesafe.akka" %% "akka-actor" % "2.3.13"
 )
 
 resolvers in ThisBuild ++= Seq(

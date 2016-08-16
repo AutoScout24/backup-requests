@@ -1,9 +1,6 @@
 package com.autoscout24.backupRequests
 
-import TypedEvents.BackupRequestFired
 import akka.actor.ActorSystem
-import com.autoscout24.eventpublisher24.events.TypedEventPublisher
-import com.autoscout24.eventpublisher24.request.ScoutRequestMeta
 import com.google.inject.{Inject, Singleton}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
   * has not yet completed or has been completed with a failure.
   */
 @Singleton
-class BackupRequests @Inject()(actorSystem: ActorSystem, eventPublisher: TypedEventPublisher) {
+class BackupRequests @Inject()(actorSystem: ActorSystem) {
 
   /**
     * Uses backup requests to reduce p99.9 response times.
@@ -23,20 +20,27 @@ class BackupRequests @Inject()(actorSystem: ActorSystem, eventPublisher: TypedEv
     * @param op                  Executes the IO operation
     * @param backupRequestsAfter A sequence of durations when the backup request should be executed
     */
-  def executeWithBackup[T](op: () => Future[T], backupRequestsAfter: Seq[FiniteDuration])
-                          (implicit maybeScoutRequestMeta: Option[ScoutRequestMeta]): Future[T] = {
+  def executeWithBackup[T, M](op: () => Future[T],
+                              backupRequestsAfter: Seq[FiniteDuration],
+                              maybeMetadata: Option[M],
+                              backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
+                             ): Future[T] = {
     val initial = op().recoverWith {
       case t =>
-        eventPublisher.publish(BackupRequestFired(originalRequestCompleted = true, Some(t)))
+        backupRequestFiredCallback(maybeMetadata, Some(t))
         op()
     }
     backupRequestsAfter.foldLeft(initial) {
-      (acc, timeout) => setupBackupTimeout(acc, op, timeout)
+      (acc, timeout) => setupBackupTimeout(acc, op, timeout, maybeMetadata, backupRequestFiredCallback)
     }
   }
 
-  private def setupBackupTimeout[T](previous: Future[T], op: () => Future[T], timeout: FiniteDuration)
-                                   (implicit maybeScoutRequestMeta: Option[ScoutRequestMeta]): Future[T] = {
+  private def setupBackupTimeout[T, M](previous: Future[T],
+                                       op: () => Future[T],
+                                       timeout: FiniteDuration,
+                                       maybeMetadata: Option[M],
+                                       backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
+                                      ): Future[T] = {
     val backup = akka.pattern.after(timeout, using = actorSystem.scheduler) {
       val value = previous.value // nonEmpty and flatMap below use the same snapshot in time for the future value
       val completed = value.nonEmpty
@@ -44,7 +48,7 @@ class BackupRequests @Inject()(actorSystem: ActorSystem, eventPublisher: TypedEv
 
       if (completed) previous
       else {
-        eventPublisher.publish(BackupRequestFired(completed, maybeFailure))
+        backupRequestFiredCallback(maybeMetadata, maybeFailure)
         op()
       }
     }
