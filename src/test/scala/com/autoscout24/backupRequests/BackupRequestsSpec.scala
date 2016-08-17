@@ -8,13 +8,14 @@ import com.google.common.base.Stopwatch
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Span, _}
-import org.specs2.mutable._
+import org.scalatest.{MustMatchers, WordSpec}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
-class BackupRequestsSpec extends Specification with ScalaFutures with IntegrationPatience {
+class BackupRequestsSpec extends WordSpec with ScalaFutures with IntegrationPatience with MustMatchers {
 
   val actorSystem = ActorSystem("BlockingIoSpec")
   val twoSecTimeout = Timeout(Span(2000, Milliseconds))
@@ -44,8 +45,8 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
       Some("metaValue"),
       backupRequestCallback).futureValue
 
-    count.intValue() mustEqual 2
-    result mustEqual "second request completed"
+    count.intValue() must be(2)
+    result must be("second request completed")
     callbackCalled.get mustEqual true
   }
 
@@ -66,7 +67,7 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
     result mustEqual "second request completed"
 
     stopWatch.stop()
-    stopWatch.elapsed(TimeUnit.MILLISECONDS) must beLessThan(1000l)
+    stopWatch.elapsed(TimeUnit.MILLISECONDS) must be < 1000l
   }
 
 
@@ -100,10 +101,10 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
       backupRequestCallback).futureValue(twoSecTimeout)
 
     stopWatch.stop()
-    stopWatch.elapsed(TimeUnit.MILLISECONDS) must beLessThan(200l)
+    stopWatch.elapsed(TimeUnit.MILLISECONDS) must be < 200l
   }
 
-  "A successful request is taken even if the failed request is faster" in {
+  "A successful first request is taken even if the failed request is faster" in {
     val count = new AtomicInteger(0)
 
     def firstFailsAndSecondIsSlowSuccessfulRequest() =
@@ -116,7 +117,22 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
         Future.failed(new Exception("boom!"))
       }
 
-    def backupRequestsCallback(m : Option[String], t: Option[Throwable]): Unit = {}
+    def backupRequestsCallback(m: Option[String], t: Option[Throwable]): Unit = {}
+
+    backupRequests.executeWithBackup(firstFailsAndSecondIsSlowSuccessfulRequest,
+      Seq(10.milliseconds), None, backupRequestsCallback).futureValue must be("success")
+  }
+
+  "A successful second request is taken even if the failed first request is faster" in {
+    val count = new AtomicInteger(0)
+
+    def firstFailsAndSecondIsSlowSuccessfulRequest() =
+      if (count.incrementAndGet() == 1)
+        Future.failed(new Exception("boom!"))
+      else
+        Future { Thread.sleep(400); "success" }
+
+    def backupRequestsCallback(m: Option[String], t: Option[Throwable]): Unit = {}
 
     backupRequests.executeWithBackup(firstFailsAndSecondIsSlowSuccessfulRequest,
       Seq(10.milliseconds), None, backupRequestsCallback).futureValue must be("success")
@@ -125,14 +141,13 @@ class BackupRequestsSpec extends Specification with ScalaFutures with Integratio
   "Promise is completed even if all requests fail" in {
     def failAlways(): Future[String] = Future.failed(new Exception("boom!"))
 
-    def backupRequestsCallback(m : Option[String], t: Option[Throwable]): Unit = {}
+    def backupRequestsCallback(m: Option[String], t: Option[Throwable]): Unit = {}
 
-    try {
-      backupRequests.executeWithBackup(failAlways, Seq(10.milliseconds), None, backupRequestsCallback).futureValue
-      throw new Exception("test failed should never reach here")
-    } catch {
-      case e: Exception => e.getMessage must be("boom!")
-    }
+    val result = backupRequests.executeWithBackup(failAlways, Seq(10.milliseconds), None, backupRequestsCallback)
+    result.onSuccess { case _ => fail("These backup requests should not complete successfully") }
+    result.onFailure { case t => t.getMessage must be("boom!") }
+
+    Try(result.futureValue)
   }
 }
 

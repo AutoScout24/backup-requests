@@ -2,10 +2,9 @@ package com.autoscout24.backupRequests
 
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -25,7 +24,7 @@ class BackupRequests @Inject()(actorSystem: ActorSystem) {
                               backupRequestsAfter: Seq[FiniteDuration],
                               maybeMetadata: Option[M],
                               backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
-                             ): Future[T] = {
+                             )(implicit ec: ExecutionContext): Future[T] = {
     val initial = op().recoverWith {
       case t =>
         backupRequestFiredCallback(maybeMetadata, Some(t))
@@ -41,7 +40,7 @@ class BackupRequests @Inject()(actorSystem: ActorSystem) {
                                        timeout: FiniteDuration,
                                        maybeMetadata: Option[M],
                                        backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
-                                      ): Future[T] = {
+                                      )(implicit ec: ExecutionContext): Future[T] = {
     val backup = akka.pattern.after(timeout, using = actorSystem.scheduler) {
       val value = previous.value // nonEmpty and flatMap below use the same snapshot in time for the future value
       val completed = value.nonEmpty
@@ -68,15 +67,20 @@ object BackupRequests {
     futures foreach { _ onSuccess completeWithSuccessfulValue }
 
     val matFutures: TraversableOnce[Future[Try[T]]] = futures.map {
-      future => future.map(v => Success(v)).recover {
-        case t: Throwable => Failure(t)
-      }
+      future =>
+        val f: Future[Try[T]] = future
+          .map { case v => Success(v) }
+          .recover { case t: Throwable => Failure(t) }
+        f
     }
 
-    Future.sequence(matFutures).onSuccess {
+    val sequence = Future.sequence(matFutures)
+
+    sequence.onSuccess {
       case results =>
+        val futureSeq = results.toSeq
         val allFailure = results.forall(_.isFailure)
-        if(allFailure) p.complete(results.toSeq.head)
+        if(allFailure) p.tryComplete(futureSeq.headOption.getOrElse(Failure(new IllegalArgumentException("futures argument must not be empty"))))
     }
 
     p.future
