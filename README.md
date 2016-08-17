@@ -50,11 +50,16 @@ import com.autoscout24.backupRequests.BackupRequests
 
 def doRequest[T](): () => Future[T] = ...
 
-def backupRequestsCallback(maybeMetadata: Option[YetAnotherMetadata], maybeFailure: Option[Throwable]): Unit = {
+def backupRequestsCallback(
+    maybeMetadata: Option[YetAnotherMetadata], 
+    maybeFailure: Option[Throwable]): Unit = {
+    
   eventPublisher.publish(BackupRequestFired(maybeFailure.isDefined, maybeFailure)(maybeMetadata))
 }
 
-backupRequests.executeWithBackup(doRequest, Seq(200 milliseconds), Some(scoutRequestMeta), backupRequestsCallback)
+backupRequests.executeWithBackup(
+    doRequest, Seq(200 milliseconds), Some(scoutRequestMeta), backupRequestsCallback
+)
 
 ```
 
