@@ -9,6 +9,9 @@ This library enables you to do additional `scala.concurrent.Future` executions i
 
 * if they are completed with an exception
 
+## Owner
+Team owning this repository: [Revolistion](AutoScout24/teams/revolistion)
+
 ## Status
 
 [![Build Status](https://travis-ci.org/AutoScout24/backup-requests.svg)](https://travis-ci.org/AutoScout24/backup-requests)
