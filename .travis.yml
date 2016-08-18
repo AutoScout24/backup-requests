@@ -19,9 +19,10 @@ script:
 
 notifications:
   email:
-  - revolistion@autoscout24.com
-    on_failure: always
+    recipients:
+    - revolistion@autoscout24.com
   slack: scout24:R2Wa8ST4UlL271lKbJU9tAF8
+    on_success: change
     on_failure: always
 
 after_success:
