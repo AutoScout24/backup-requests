@@ -15,7 +15,7 @@ Team owning this repository: [Revolistion](AutoScout24/teams/revolistion)
 ## Status
 
 [![Build Status](https://travis-ci.org/AutoScout24/backup-requests.svg)](https://travis-ci.org/AutoScout24/backup-requests)
-[![Coverage Status](https://coveralls.io/repos/AutoScout24/backup-requests/badge.svg)](https://coveralls.io/r/AutoScout24/backup-requests)
+[![Coverage Status](https://coveralls.io/repos/github/AutoScout24/backup-requests/badge.svg?branch=master)](https://coveralls.io/github/AutoScout24/backup-requests?branch=master)
 [![Download](https://api.bintray.com/packages/tatsu-kondor/maven/backup-requests/images/download.svg) ](https://bintray.com/tatsu-kondor/maven/backup-requests/_latestVersion)
 
 ## Setup
