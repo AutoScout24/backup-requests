@@ -24,10 +24,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.13"
 )
 
-coverallsTokenFile := Some("/home/travis/.coveralls/.token")
+ScoverageSbtPlugin.ScoverageKeys.coverageMinimum := 90
 
-coverageMinimum := 90
-coverageFailOnMinimum := true
+ScoverageSbtPlugin.ScoverageKeys.coverageFailOnMinimum := true
 
 resolvers in ThisBuild ++= Seq(
   Classpaths.sbtPluginReleases,
