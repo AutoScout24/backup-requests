@@ -20,27 +20,33 @@ class BackupRequests @Inject()(actorSystem: ActorSystem) {
     * @param op                  Executes the IO operation
     * @param backupRequestsAfter A sequence of durations when the backup request should be executed
     */
-  def executeWithBackup[T, M](op: () => Future[T],
-                              backupRequestsAfter: Seq[FiniteDuration],
-                              maybeMetadata: Option[M],
-                              backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
-                             )(implicit ec: ExecutionContext): Future[T] = {
+  def executeWithBackup[T, M](
+      op: () => Future[T],
+      backupRequestsAfter: Seq[FiniteDuration],
+      maybeMetadata: Option[M],
+      backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit)(
+      implicit ec: ExecutionContext): Future[T] = {
     val initial = op().recoverWith {
       case t =>
         backupRequestFiredCallback(maybeMetadata, Some(t))
         op()
     }
-    backupRequestsAfter.foldLeft(initial) {
-      (acc, timeout) => setupBackupTimeout(acc, op, timeout, maybeMetadata, backupRequestFiredCallback)
+    backupRequestsAfter.foldLeft(initial) { (acc, timeout) =>
+      setupBackupTimeout(acc,
+                         op,
+                         timeout,
+                         maybeMetadata,
+                         backupRequestFiredCallback)
     }
   }
 
-  private def setupBackupTimeout[T, M](previous: Future[T],
-                                       op: () => Future[T],
-                                       timeout: FiniteDuration,
-                                       maybeMetadata: Option[M],
-                                       backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit
-                                      )(implicit ec: ExecutionContext): Future[T] = {
+  private def setupBackupTimeout[T, M](
+      previous: Future[T],
+      op: () => Future[T],
+      timeout: FiniteDuration,
+      maybeMetadata: Option[M],
+      backupRequestFiredCallback: (Option[M], Option[Throwable]) => Unit)(
+      implicit ec: ExecutionContext): Future[T] = {
     val backup = akka.pattern.after(timeout, using = actorSystem.scheduler) {
       val value = previous.value // nonEmpty and flatMap below use the same snapshot in time for the future value
       val completed = value.nonEmpty
@@ -59,28 +65,29 @@ class BackupRequests @Inject()(actorSystem: ActorSystem) {
 
 object BackupRequests {
 
-  def firstSuccessfulCompletedOf[T](futures: TraversableOnce[Future[T]])(implicit executor: ExecutionContext): Future[T] = {
+  def firstSuccessfulCompletedOf[T](futures: TraversableOnce[Future[T]])(
+      implicit executor: ExecutionContext): Future[T] = {
     val p = Promise[T]()
     val completeWithSuccessfulValue: PartialFunction[T, Unit] = {
       case v => p trySuccess v
     }
-    futures foreach { _ onSuccess completeWithSuccessfulValue }
+    futures foreach { _ foreach completeWithSuccessfulValue }
 
-    val matFutures: TraversableOnce[Future[Try[T]]] = futures.map {
-      future =>
-        val f: Future[Try[T]] = future
-          .map { case v => Success(v) }
-          .recover { case t: Throwable => Failure(t) }
-        f
+    val matFutures: TraversableOnce[Future[Try[T]]] = futures.map { future =>
+      val f: Future[Try[T]] = future
+        .map(v => Success(v))
+        .recover { case t: Throwable => Failure(t) }
+      f
     }
 
     val sequence = Future.sequence(matFutures)
 
-    sequence.onSuccess {
-      case results =>
-        val futureSeq = results.toSeq
-        val allFailure = results.forall(_.isFailure)
-        if(allFailure) p.tryComplete(futureSeq.headOption.getOrElse(Failure(new IllegalArgumentException("futures argument must not be empty"))))
+    sequence.foreach { results =>
+      val futureSeq = results.toSeq
+      val allFailure = results.forall(_.isFailure)
+      if (allFailure)
+        p.tryComplete(futureSeq.headOption.getOrElse(Failure(
+          new IllegalArgumentException("futures argument must not be empty"))))
     }
 
     p.future

@@ -1,5 +1,4 @@
 import scala.util.Properties
-import org.scoverage.coveralls.Imports.CoverallsKeys._
 
 name := "backup-requests"
 
@@ -9,24 +8,22 @@ licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
 version in ThisBuild := "1.0." + Properties.envOrElse("TRAVIS_BUILD_NUMBER", "0-SNAPSHOT")
 
-scalaVersion := "2.11.11"
+crossScalaVersions in ThisBuild := Seq("2.12.4", "2.11.11")
+
+scalaVersion := "2.12.4"
 
 scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings",
   "-Yno-adapted-args", "-Xmax-classfile-name", "130")
 
 libraryDependencies ++= Seq(
   "org.mockito" % "mockito-all" % "1.10.19",
-  "org.specs2" %% "specs2-core" % "3.8.4.1-scalaz-7.1" % "test",
-  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
-  "net.codingwell" %% "scala-guice" % "4.0.1",
-  "com.typesafe.akka" %% "akka-actor" % "2.3.13"
+  "org.specs2" %% "specs2-core" % "4.0.2-f59ba9b-20171124130950" % "test",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.4" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
+  "net.codingwell" %% "scala-guice" % "4.1.1",
+  "com.typesafe.akka" %% "akka-actor" % "2.5.7"
 )
-
-ScoverageSbtPlugin.ScoverageKeys.coverageMinimum := 90
-
-ScoverageSbtPlugin.ScoverageKeys.coverageFailOnMinimum := true
 
 resolvers in ThisBuild ++= Seq(
   Classpaths.sbtPluginReleases,
