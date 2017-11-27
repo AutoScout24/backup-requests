@@ -1,5 +1,8 @@
 import scala.util.Properties
 
+val bintrayUser: Unit = sys.env.get("BINTRAY_USER").foreach((key) => System.getProperties.setProperty("bintray.user", key))
+val bintrayPass: Unit = sys.env.get("BINTRAY_APIKEY").foreach((key) => System.getProperties.setProperty("bintray.pass", key))
+
 name := "backup-requests"
 
 organization in ThisBuild := "com.autoscout24"
