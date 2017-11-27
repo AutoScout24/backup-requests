@@ -9,7 +9,7 @@ licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
 
 version in ThisBuild := "1.0." + Properties.envOrElse("TRAVIS_BUILD_NUMBER", "0-SNAPSHOT")
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings",
   "-Yno-adapted-args", "-Xmax-classfile-name", "130")
