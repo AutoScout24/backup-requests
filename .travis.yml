@@ -26,6 +26,6 @@ notifications:
 
 after_success:
   - >
-      sbt coverageAggregate coveralls &&
+      sbt coverageReport && sbt coverageAggregate && sbt coveralls &&
       sh "$TRAVIS_BUILD_DIR/travis-ci-bintray-credentials.sh" &&
       sbt publish
