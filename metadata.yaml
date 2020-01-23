@@ -8,5 +8,6 @@ vertical: as24
 confidentiality: company-internal
 integrity: true
 availability: true
-exposure: platform
+exposure: 
+  - platform
 lifecycle: ga
