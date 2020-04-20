@@ -3,7 +3,7 @@ name: backup-requests
 id: backup-requests
 type: application
 owners: 
- - '#AS24-Engagement-CXP-Web-ds@scout24.com'
+ - '#AS24-Engagement-CXP-Web-ds@autoscout24.com'
 vertical: as24
 confidentiality: company-internal
 integrity: true
